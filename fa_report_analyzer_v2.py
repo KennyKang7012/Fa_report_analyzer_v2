@@ -698,18 +698,20 @@ class FAReportAnalyzer:
                 return grade, description
         return 'F', '不合格報告'
     
-    def generate_report(self, analysis_result: Dict, output_path: str = None) -> str:
+    def generate_report(self, analysis_result: Dict, output_path: str = None, source_file: str = None) -> str:
         """生成評估報告"""
         total_score = analysis_result['total_score']
         grade = analysis_result['grade']
         grade_desc = [desc for g, (_, _, desc) in self.grade_criteria.items() if g == grade][0]
-        
+
         # 生成報告內容
         report = []
         report.append("=" * 80)
         report.append("FA 報告評估結果")
         report.append("=" * 80)
         report.append(f"\n生成時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        if source_file:
+            report.append(f"來源檔案: {source_file}")
         report.append(f"分析引擎: {self.backend.upper()} ({self.model})\n")
         
         # 1. 總分與等級
@@ -770,33 +772,48 @@ class FAReportAnalyzer:
     
     def analyze_report(self, input_file: str, output_file: str = None) -> Dict:
         """完整的報告分析流程"""
+        import os
+
         print("=" * 80)
         print("FA 報告分析工具 v2.0")
         print("=" * 80)
-        
+
         # 1. 讀取報告
         print(f"\n[1/3] 讀取報告文件: {input_file}")
         report_content, images = self.read_report(input_file)
         print(f"✓ 成功讀取報告 ({len(report_content)} 字元)")
         if images:
             print(f"✓ 提取到 {len(images)} 張圖片")
-        
+
         # 2. AI 分析
         print(f"\n[2/3] 使用 {self.backend.upper()} 進行深度分析...")
         analysis_result = self.analyze_with_ai(report_content, images)
         print("✓ 分析完成")
-        
+
         # 3. 生成報告
         print("\n[3/3] 生成評估報告...")
+
+        # 創建輸出資料夾
+        output_dir = "evaluation_results"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 如果沒有指定輸出文件，自動生成文件名
         if not output_file:
             output_file = f"fa_evaluation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        
-        report_text = self.generate_report(analysis_result, output_file)
-        
+
+        # 確保輸出文件在指定資料夾內
+        if not output_file.startswith(output_dir):
+            output_file = os.path.join(output_dir, os.path.basename(output_file))
+
+        # 獲取來源文件名
+        source_filename = os.path.basename(input_file)
+
+        report_text = self.generate_report(analysis_result, output_file, source_filename)
+
         print("\n" + "=" * 80)
         print("分析完成!")
         print("=" * 80)
-        
+
         return analysis_result
 
 
