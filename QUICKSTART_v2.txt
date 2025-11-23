@@ -1,0 +1,274 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    FA REPORT ANALYZER v2.0 - 快速開始指南
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎉 v2.0 新功能
+────────────────────────────────────────────────────────────────
+✨ 支援地端 Ollama 模型 - 完全本地化，數據不外流
+✨ 圖片分析功能 - 直接分析 JPG/PNG/PDF 圖片
+✨ 多模態支援 - 同時分析文字和圖片
+✨ 多後端選擇 - Ollama / OpenAI / Anthropic
+
+📦 核心特色
+────────────────────────────────────────────────────────────────
+🔒 完全本地化 - 使用 Ollama，數據不離開電腦
+🖼️ 智能圖片分析 - 自動提取並分析文檔中的圖片
+📊 六大維度評估 - 全面評估報告品質
+💡 具體改善建議 - 提供可操作的改進方案
+🆓 完全免費 - 使用 Ollama 無需任何費用
+
+⚡ 三步驟快速開始
+────────────────────────────────────────────────────────────────
+
+方案 A: 一鍵安裝（推薦）
+─────────────────────
+chmod +x install_ollama.sh
+./install_ollama.sh
+python3 fa_report_analyzer_v2.py -i your_report.pdf
+
+方案 B: 手動安裝
+──────────────
+
+步驟 1: 安裝 Ollama
+──────────────────
+
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+# macOS
+brew install ollama
+
+# Windows
+# 下載: https://ollama.com/download
+
+步驟 2: 下載模型並啟動
+───────────────────────
+ollama pull llama3.2-vision:latest
+ollama serve  # 在背景執行
+
+步驟 3: 安裝 Python 套件
+────────────────────────
+
+# 最小安裝（基本功能）
+pip install ollama pandas Pillow PyPDF2 --break-system-packages
+
+# 完整安裝（推薦）
+pip install ollama pandas Pillow PyPDF2 PyMuPDF python-docx python-pptx --break-system-packages
+
+步驟 4: 執行分析
+───────────────
+python3 fa_report_analyzer_v2.py -i your_report.pdf
+
+🎯 使用範例
+────────────────────────────────────────────────────────────────
+
+範例 1: 分析文字報告
+────────────────────
+python3 fa_report_analyzer_v2.py -i sample_fa_report.txt
+
+範例 2: 分析 PDF（含圖片）
+─────────────────────────
+python3 fa_report_analyzer_v2.py -i report_with_images.pdf
+
+範例 3: 分析單張圖片
+───────────────────
+python3 fa_report_analyzer_v2.py -i failure_photo.jpg
+
+範例 4: 分析 PowerPoint
+──────────────────────
+python3 fa_report_analyzer_v2.py -i fa_presentation.pptx
+
+範例 5: 指定輸出文件
+───────────────────
+python3 fa_report_analyzer_v2.py -i report.pdf -o my_evaluation.txt
+
+範例 6: 使用其他模型
+───────────────────
+python3 fa_report_analyzer_v2.py -i report.pdf -m llava:13b
+
+範例 7: 使用 OpenAI
+──────────────────
+python3 fa_report_analyzer_v2.py -i report.pdf -b openai -k YOUR_API_KEY
+
+範例 8: 使用 Claude
+──────────────────
+python3 fa_report_analyzer_v2.py -i report.pdf -b anthropic -k YOUR_API_KEY
+
+📊 支援的文件格式
+────────────────────────────────────────────────────────────────
+
+文字文件:
+  ✅ TXT  - 純文字
+  ✅ PDF  - 含文字和圖片
+  ✅ DOCX - Word 文件含圖片
+  ✅ PPTX - PowerPoint 含圖片
+
+圖片文件:
+  ✅ JPG/JPEG - JPEG 圖片
+  ✅ PNG      - PNG 圖片
+  ✅ GIF      - GIF 圖片
+  ✅ WEBP     - WebP 圖片
+
+🎨 評估維度（總分 100）
+────────────────────────────────────────────────────────────────
+1. 基本資訊完整性 (15%) - 產品資訊、客戶資訊、FA 編號
+2. 問題描述與定義 (15%) - 失效現象、失效模式、影響評估
+3. 分析方法與流程 (20%) - 方法適當性、步驟完整性
+4. 數據與證據支持 (20%) - 數據充分性、圖片品質
+5. 根因分析 (20%)       - 原因深度、邏輯推導
+6. 改善對策 (10%)       - 短中長期對策完整性
+
+📈 評分等級
+────────────────────────────────────────────────────────────────
+A 級 (90-100) → 卓越報告    ⭐⭐⭐⭐⭐
+B 級 (80-89)  → 良好報告    ⭐⭐⭐⭐
+C 級 (70-79)  → 合格報告    ⭐⭐⭐
+D 級 (60-69)  → 待改進報告  ⭐⭐
+F 級 (<60)    → 不合格報告  ⭐
+
+🔧 後端選擇指南
+────────────────────────────────────────────────────────────────
+
+Ollama（推薦）
+─────────────
+優點: ✅ 本地化 ✅ 免費 ✅ 無延遲 ✅ 支援圖片
+缺點: ⚠️ 需要 8GB+ RAM
+命令: python3 fa_report_analyzer_v2.py -i report.pdf
+
+OpenAI API
+──────────
+優點: ✅ 高精度 ✅ 無需本地資源 ✅ GPT-4o
+缺點: ⚠️ 付費 ⚠️ 數據外傳
+命令: python3 fa_report_analyzer_v2.py -i report.pdf -b openai -k API_KEY
+
+Anthropic Claude
+────────────────
+優點: ✅ 高品質 ✅ 支援多圖片 ✅ 中文友好
+缺點: ⚠️ 付費 ⚠️ 數據外傳
+命令: python3 fa_report_analyzer_v2.py -i report.pdf -b anthropic -k API_KEY
+
+💡 Ollama 推薦模型
+────────────────────────────────────────────────────────────────
+
+llama3.2-vision:latest (推薦)
+────────────────────────────
+大小: ~8GB
+特點: Meta 最新視覺模型，平衡性能與資源
+命令: ollama pull llama3.2-vision:latest
+
+llava:13b (備選)
+───────────────
+大小: ~8GB
+特點: 穩定的視覺模型
+命令: ollama pull llava:13b
+
+llama3.2-vision:90b (高精度)
+──────────────────────────
+大小: ~50GB
+特點: 超大型模型，需要強大硬體
+命令: ollama pull llama3.2-vision:90b
+
+📋 輸出報告範例
+────────────────────────────────────────────────────────────────
+
+【總分與等級】
+總分: 85.5 分
+等級: B 級 - 良好報告
+分析引擎: OLLAMA (llama3.2-vision:latest)
+
+【各維度評分表】
+評估維度         權重  得分  完成度  評語
+基本資訊完整性   15%   13.5  90.0%   資訊完整...
+問題描述與定義   15%   12.8  85.3%   描述清晰...
+分析方法與流程   20%   17.0  85.0%   方法適當...
+數據與證據支持   20%   17.2  86.0%   圖片清晰...
+根因分析         20%   16.5  82.5%   邏輯嚴謹...
+改善對策         10%    8.5  85.0%   對策完整...
+
+【優點分析】
+1. 報告結構完整，包含所有必要章節
+2. 使用了系統化的 5-Why 根因分析方法
+3. 圖片標註清晰，有效支持分析結論
+
+【待改進項目】
+1. [高優先級] 缺少對照組數據
+   改善建議: 建議增加良品的對照測試數據
+
+2. [中優先級] 統計分析不足
+   改善建議: 建議加入 Cpk、信賴區間等統計指標
+
+🔍 驗證安裝
+────────────────────────────────────────────────────────────────
+
+# 檢查 Ollama
+ollama --version
+ollama list
+
+# 檢查 Python 套件
+python3 -c "import ollama; print('✓ Ollama SDK')"
+python3 -c "import pandas; print('✓ Pandas')"
+python3 -c "from PIL import Image; print('✓ Pillow')"
+
+# 測試模型
+ollama run llama3.2-vision:latest "Hello"
+
+📚 查看完整文檔
+────────────────────────────────────────────────────────────────
+完整說明:     cat README_v2.md
+Ollama 配置:  cat OLLAMA_SETUP.md
+程式參數:     python3 fa_report_analyzer_v2.py --help
+
+🐛 常見問題
+────────────────────────────────────────────────────────────────
+
+Q: Ollama 連接失敗?
+A: 確保服務運行: ollama serve
+
+Q: 模型未找到?
+A: 下載模型: ollama pull llama3.2-vision:latest
+
+Q: 記憶體不足?
+A: 使用較小模型或關閉其他程式
+
+Q: 圖片無法解析?
+A: 安裝完整套件: pip install PyMuPDF python-docx python-pptx --break-system-packages
+
+Q: GPU 未被使用?
+A: 確保 NVIDIA 驅動正確安裝，Ollama 會自動使用 GPU
+
+⚙️ 系統需求
+────────────────────────────────────────────────────────────────
+最低需求:
+  • CPU: 4 核心
+  • RAM: 8GB
+  • 硬碟: 10GB
+
+推薦配置:
+  • CPU: 8 核心以上
+  • RAM: 16GB 以上
+  • 硬碟: 20GB 以上
+  • GPU: NVIDIA GPU 4GB+ VRAM（選用）
+
+🎓 進階用法
+────────────────────────────────────────────────────────────────
+
+批次分析:
+for file in *.pdf; do
+    python3 fa_report_analyzer_v2.py -i "$file"
+done
+
+程式化使用:
+from fa_report_analyzer_v2 import FAReportAnalyzer
+analyzer = FAReportAnalyzer(backend="ollama")
+result = analyzer.analyze_report('report.pdf')
+print(f"分數: {result['total_score']}")
+
+🔗 相關資源
+────────────────────────────────────────────────────────────────
+Ollama 官網:     https://ollama.com
+模型庫:          https://ollama.com/library
+GitHub:          https://github.com/ollama/ollama
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+版本: v2.0.0 | 日期: 2024-11-20 | 開發: KennyKang
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

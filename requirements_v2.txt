@@ -1,0 +1,63 @@
+# FA Report Analyzer v2.0 - 依賴套件清單
+
+# ============================================
+# 核心套件（必須安裝）
+# ============================================
+pandas>=2.0.0
+
+# ============================================
+# LLM 後端（至少選擇一個）
+# ============================================
+
+# Ollama (推薦 - 本地運行，免費)
+ollama>=0.1.0
+
+# OpenAI API (備選 - 需要 API key)
+# openai>=1.0.0
+
+# Anthropic Claude (備選 - 需要 API key)
+# anthropic>=0.18.0
+
+# ============================================
+# 圖片處理（必須安裝）
+# ============================================
+Pillow>=10.0.0
+
+# ============================================
+# 文件格式支援（依需求安裝）
+# ============================================
+
+# PDF 支援 - 基礎文字提取
+PyPDF2>=3.0.0
+
+# PDF 支援 - 圖片提取
+PyMuPDF>=1.23.0
+
+# Word 文件支援
+python-docx>=1.0.0
+
+# PowerPoint 支援
+python-pptx>=0.6.21
+
+# ============================================
+# 開發工具（選用）
+# ============================================
+# jupyter>=1.0.0
+# ipython>=8.0.0
+
+# ============================================
+# 安裝指令
+# ============================================
+# 
+# 最小安裝（Ollama + 基本功能）:
+#   pip install ollama pandas Pillow PyPDF2 --break-system-packages
+# 
+# 完整安裝（所有功能）:
+#   pip install ollama pandas Pillow PyPDF2 PyMuPDF python-docx python-pptx --break-system-packages
+# 
+# 使用 OpenAI:
+#   pip install openai pandas Pillow PyPDF2 PyMuPDF python-docx python-pptx --break-system-packages
+# 
+# 使用 Anthropic:
+#   pip install anthropic pandas Pillow PyPDF2 PyMuPDF python-docx python-pptx --break-system-packages
+#
