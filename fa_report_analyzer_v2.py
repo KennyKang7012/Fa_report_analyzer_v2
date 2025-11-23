@@ -63,7 +63,7 @@ class FAReportAnalyzer:
             self.model = model
         else:
             if self.backend == "ollama":
-                self.model = "llama3.2-vision:latest"  # 支援視覺的模型
+                self.model = "gpt-oss:20b"  # 支援視覺的模型
             elif self.backend == "openai":
                 self.model = "gpt-4o"
             elif self.backend == "anthropic":
@@ -121,6 +121,90 @@ class FAReportAnalyzer:
         
         else:
             raise ValueError(f"不支援的後端: {self.backend}")
+    
+    def _convert_ppt_to_pptx(self, ppt_path: str) -> Optional[str]:
+        """嘗試將 .ppt 轉換為 .pptx
+        
+        Args:
+            ppt_path: .ppt 文件路徑
+            
+        Returns:
+            轉換後的 .pptx 文件路徑，失敗返回 None
+        """
+        import subprocess
+        import os
+        
+        pptx_path = ppt_path.rsplit('.', 1)[0] + '_converted.pptx'
+        
+        # 方法 1: 嘗試使用 LibreOffice
+        try:
+            # 檢查 LibreOffice 是否安裝
+            libreoffice_paths = [
+                'libreoffice',
+                '/Applications/LibreOffice.app/Contents/MacOS/soffice',  # macOS
+                '/usr/bin/libreoffice',  # Linux
+                'C:\\Program Files\\LibreOffice\\program\\soffice.exe',  # Windows
+            ]
+            
+            libreoffice_cmd = None
+            for path in libreoffice_paths:
+                try:
+                    if os.path.exists(path) or subprocess.run(
+                        [path, '--version'], 
+                        capture_output=True, 
+                        timeout=2
+                    ).returncode == 0:
+                        libreoffice_cmd = path
+                        break
+                except:
+                    continue
+            
+            if libreoffice_cmd:
+                print(f"  使用 LibreOffice 進行轉換...")
+                output_dir = os.path.dirname(ppt_path)
+                result = subprocess.run(
+                    [
+                        libreoffice_cmd,
+                        '--headless',
+                        '--convert-to', 'pptx',
+                        '--outdir', output_dir,
+                        ppt_path
+                    ],
+                    capture_output=True,
+                    timeout=30
+                )
+                
+                if result.returncode == 0:
+                    # LibreOffice 會生成與原文件同名但副檔名為 .pptx 的文件
+                    auto_pptx = ppt_path.rsplit('.', 1)[0] + '.pptx'
+                    if os.path.exists(auto_pptx):
+                        return auto_pptx
+                    elif os.path.exists(pptx_path):
+                        return pptx_path
+        except Exception as e:
+            print(f"  LibreOffice 轉換失敗: {e}")
+        
+        # 方法 2: 在 Windows 上嘗試使用 pywin32
+        if os.name == 'nt':
+            try:
+                import win32com.client
+                print(f"  使用 PowerPoint COM 進行轉換...")
+                
+                powerpoint = win32com.client.Dispatch("PowerPoint.Application")
+                powerpoint.Visible = 1
+                
+                # 打開並轉換
+                deck = powerpoint.Presentations.Open(os.path.abspath(ppt_path))
+                deck.SaveAs(os.path.abspath(pptx_path), 24)  # 24 = ppSaveAsOpenXMLPresentation
+                deck.Close()
+                powerpoint.Quit()
+                
+                if os.path.exists(pptx_path):
+                    return pptx_path
+            except Exception as e:
+                print(f"  COM 轉換失敗: {e}")
+        
+        return None
     
     def _encode_image(self, image_path: str) -> str:
         """將圖片編碼為 base64
@@ -308,6 +392,33 @@ class FAReportAnalyzer:
         
         # PowerPoint 文件
         elif suffix in ['.ppt', '.pptx']:
+            # 處理舊版 .ppt 格式
+            if suffix == '.ppt':
+                print(f"⚠️  檢測到舊版 PowerPoint 格式 (.ppt)")
+                print(f"正在嘗試轉換為 .pptx 格式...")
+                
+                converted_path = self._convert_ppt_to_pptx(str(file_path))
+                if converted_path:
+                    print(f"✓ 轉換成功: {converted_path}")
+                    file_path = Path(converted_path)
+                else:
+                    print("\n" + "=" * 70)
+                    print("⚠️  無法自動轉換 .ppt 文件")
+                    print("=" * 70)
+                    print("\n請使用以下方法之一:\n")
+                    print("方法 1: 手動轉換 (推薦)")
+                    print("  1. 在 PowerPoint 中開啟此文件")
+                    print("  2. 另存為 .pptx 格式")
+                    print("  3. 重新執行分析\n")
+                    print("方法 2: 使用 LibreOffice 轉換")
+                    print("  安裝: brew install libreoffice  # macOS")
+                    print("       sudo apt install libreoffice  # Linux")
+                    print(f"  轉換: libreoffice --headless --convert-to pptx \"{file_path}\"\n")
+                    print("方法 3: 線上轉換")
+                    print("  使用 CloudConvert 或其他線上轉換工具")
+                    print("=" * 70)
+                    raise ValueError("不支援 .ppt 格式，請先轉換為 .pptx")
+            
             try:
                 from pptx import Presentation
                 prs = Presentation(file_path)
