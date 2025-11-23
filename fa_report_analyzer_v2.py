@@ -619,6 +619,10 @@ class FAReportAnalyzer:
         
         response_text = response['message']['content'].strip()
         
+        print("=== Ollama raw response ===")
+        print(response_text)
+        print("=== End raw response ===")
+
         # 清理並解析 JSON
         response_text = response_text.replace('```json', '').replace('```', '').strip()
         result = json.loads(response_text)
@@ -731,6 +735,10 @@ class FAReportAnalyzer:
         )
         
         response_text = message.content[0].text.strip()
+
+        print("=== Anthropic Claude raw response ===")
+        print(response_text)
+        print("=== End raw response ===")
         
         # 清理並解析 JSON
         response_text = response_text.replace('```json', '').replace('```', '').strip()
