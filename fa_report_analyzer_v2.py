@@ -41,22 +41,25 @@ except ImportError:
 class FAReportAnalyzer:
     """FA 報告分析器 v2.0 - 支援多種 LLM 後端和圖片解析"""
     
-    def __init__(self, 
+    def __init__(self,
                  backend: str = "ollama",
                  model: str = None,
                  api_key: str = None,
-                 base_url: str = None):
+                 base_url: str = None,
+                 skip_images: bool = False):
         """初始化分析器
-        
+
         Args:
             backend: LLM 後端 ('ollama', 'openai', 'anthropic')
             model: 模型名稱
             api_key: API key (OpenAI/Anthropic 需要)
             base_url: API base URL (OpenAI 相容接口)
+            skip_images: 是否跳過圖片分析 (僅分析文字)
         """
         self.backend = backend.lower()
         self.api_key = api_key
         self.base_url = base_url
+        self.skip_images = skip_images
         
         # 設定預設模型
         if model:
@@ -65,7 +68,9 @@ class FAReportAnalyzer:
             if self.backend == "ollama":
                 self.model = "gpt-oss:20b"  # 支援視覺的模型
             elif self.backend == "openai":
-                self.model = "gpt-4o"
+                # self.model = "gpt-4.1-mini“
+                # self.model = "gpt-4o-2024-05-13"
+                self.model = "gpt-4o-mini-2024-07-18"
             elif self.backend == "anthropic":
                 self.model = "claude-sonnet-4-20250514"
             else:
@@ -549,17 +554,22 @@ class FAReportAnalyzer:
     
     def analyze_with_ai(self, report_content: str, images: List[Dict] = None) -> Dict:
         """使用 AI 分析報告
-        
+
         Args:
             report_content: 報告文字內容
             images: 圖片列表
-            
+
         Returns:
             分析結果字典
         """
+        # 根據 skip_images 設定決定是否使用圖片
+        if self.skip_images and images:
+            print("⚠️  已啟用 --skip-images,將僅分析文字內容")
+            images = None
+
         has_images = images and len(images) > 0
         prompt = self.create_analysis_prompt(report_content, has_images)
-        
+
         try:
             if self.backend == "ollama":
                 return self._analyze_with_ollama(prompt, images)
@@ -569,7 +579,7 @@ class FAReportAnalyzer:
                 return self._analyze_with_anthropic(prompt, images)
             else:
                 raise ValueError(f"不支援的後端: {self.backend}")
-                
+
         except json.JSONDecodeError as e:
             print(f"JSON 解析錯誤: {e}")
             raise
@@ -617,14 +627,14 @@ class FAReportAnalyzer:
     def _analyze_with_openai(self, prompt: str, images: List[Dict] = None) -> Dict:
         """使用 OpenAI API 進行分析"""
         messages = []
-        
+
         # 構建消息內容
         content = []
         content.append({
             "type": "text",
             "text": prompt
         })
-        
+
         if images and len(images) > 0:
             for img in images[:10]:  # 限制最多 10 張圖片
                 content.append({
@@ -633,25 +643,61 @@ class FAReportAnalyzer:
                         "url": f"data:image/{img['format']};base64,{img['data']}"
                     }
                 })
-        
+
         messages.append({
             "role": "user",
             "content": content
         })
-        
+
         # 調用 OpenAI
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=4000
-        )
-        
-        response_text = response.choices[0].message.content.strip()
-        
-        # 清理並解析 JSON
-        response_text = response_text.replace('```json', '').replace('```', '').strip()
-        result = json.loads(response_text)
-        return result
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=4000
+            )
+
+            response_text = response.choices[0].message.content.strip()
+
+            print("=== OpenAI raw response ===")
+            print(response_text)
+            print("=== End raw response ===")
+
+            # 檢查是否被拒絕
+            if "I'm sorry" in response_text or "I cannot" in response_text or "I can't" in response_text:
+                print("\n" + "=" * 80)
+                print("⚠️  OpenAI 內容審核拒絕了此請求")
+                print("=" * 80)
+                print("\n可能原因:")
+                print("1. 圖片內容觸發了安全過濾器")
+                print("2. 技術術語被誤判為敏感內容")
+                print("3. 圖片與文字組合觸發了限制\n")
+                print("建議解決方案:")
+                print("1. 嘗試不含圖片的純文字分析:")
+                print("   python fa_report_analyzer_v2.py -i <文字檔>.txt -b openai -k YOUR_KEY")
+                print("\n2. 使用 Ollama 本地模型 (無內容限制):")
+                print("   python fa_report_analyzer_v2.py -i <檔案> -b ollama")
+                print("\n3. 使用 Anthropic Claude (較少限制):")
+                print("   python fa_report_analyzer_v2.py -i <檔案> -b anthropic -k YOUR_KEY")
+                print("=" * 80 + "\n")
+                raise ValueError("OpenAI API 拒絕處理此請求,請嘗試其他後端或純文字分析")
+
+            # 清理並解析 JSON
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+            result = json.loads(response_text)
+            return result
+
+        except json.JSONDecodeError as e:
+            print("\n" + "=" * 80)
+            print("⚠️  OpenAI 返回了無效的 JSON 格式")
+            print("=" * 80)
+            print(f"原始回應: {response_text[:200]}...")
+            print("\n這通常表示:")
+            print("1. 模型拒絕了請求")
+            print("2. 回應格式不符合預期")
+            print("\n建議: 嘗試使用其他後端 (ollama 或 anthropic)")
+            print("=" * 80 + "\n")
+            raise
     
     def _analyze_with_anthropic(self, prompt: str, images: List[Dict] = None) -> Dict:
         """使用 Anthropic Claude 進行分析"""
@@ -856,16 +902,19 @@ def main():
                         help='API key (OpenAI/Anthropic 需要)')
     parser.add_argument('--base-url',
                         help='API base URL (OpenAI 相容接口)')
-    
+    parser.add_argument('--skip-images', action='store_true',
+                        help='跳過圖片分析,僅分析文字內容 (可避免 OpenAI 內容審核問題)')
+
     args = parser.parse_args()
-    
+
     try:
         # 創建分析器
         analyzer = FAReportAnalyzer(
             backend=args.backend,
             model=args.model,
             api_key=args.api_key,
-            base_url=args.base_url
+            base_url=args.base_url,
+            skip_images=args.skip_images
         )
         
         # 執行分析
