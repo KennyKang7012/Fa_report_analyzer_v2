@@ -22,10 +22,12 @@ Core class: `FAReportAnalyzer`
 
 The analyzer abstracts different LLM providers through a unified interface:
 - `_analyze_with_ollama()` - Local inference using Ollama
-- `_analyze_with_openai()` - OpenAI API integration
+- `_analyze_with_openai()` - OpenAI API integration (v2.0.1: defaults to `gpt-4o-mini-2024-07-18`)
 - `_analyze_with_anthropic()` - Anthropic Claude API integration
 
 Each backend method handles provider-specific message formatting, image encoding, and response parsing.
+
+**Important**: The `--skip-images` flag can be used to perform text-only analysis, which is useful for avoiding OpenAI content moderation issues.
 
 ### Document Processing Pipeline
 
@@ -85,7 +87,14 @@ python fa_report_analyzer_v2.py -i sample_fa_report.txt
 
 **With OpenAI:**
 ```bash
+# Uses default gpt-4o-mini-2024-07-18
 python fa_report_analyzer_v2.py -i report.pdf -b openai -k YOUR_API_KEY
+
+# Specify different model
+python fa_report_analyzer_v2.py -i report.pdf -b openai -m gpt-4o -k YOUR_API_KEY
+
+# Skip images (text-only analysis)
+python fa_report_analyzer_v2.py -i report.pdf -b openai -k YOUR_API_KEY --skip-images
 ```
 
 **With Anthropic:**
@@ -109,6 +118,11 @@ Images are extracted from documents and encoded as base64 for transmission to vi
 - Ollama: 5 images max
 - OpenAI: 10 images max
 - Anthropic: 20 images max
+
+**New in v2.0.1**: Use `--skip-images` to perform text-only analysis, bypassing image processing entirely. This is useful when:
+- Avoiding OpenAI content moderation issues
+- Reducing API costs
+- Faster processing for text-heavy reports
 
 ### JSON Response Parsing
 AI responses must return pure JSON without markdown code blocks. The system strips common formatting artifacts:
@@ -181,8 +195,13 @@ The `create_analysis_prompt()` method constructs the evaluation prompt. Modify t
 
 ### Backend Selection Strategy
 - **Ollama**: Default, local inference, no API costs, requires model download
-- **OpenAI**: Best image understanding, requires API key and costs money
+- **OpenAI**: Best image understanding, requires API key and costs money (v2.0.1 defaults to cost-efficient `gpt-4o-mini-2024-07-18`)
 - **Anthropic**: Balanced performance, requires API key and costs money
+
+**Model Version Notes (v2.0.1)**:
+- OpenAI backend now uses `gpt-4o-mini-2024-07-18` by default (lighter, faster, cheaper)
+- Previous default `gpt-4o` can still be used with `-m gpt-4o`
+- Alternative models are commented in code: `gpt-4.1-mini`, `gpt-4o-2024-05-13`
 
 ### Chinese Language Context
 This project is designed for Chinese-language FA reports. All prompts, documentation, and output are in Traditional Chinese. The evaluation criteria are based on semiconductor industry FA report standards.
@@ -211,5 +230,12 @@ for report_file in glob.glob("reports/*.pdf"):
 
 ## Version History
 
-- **v2.0**: Multi-backend support (Ollama/OpenAI/Anthropic), image analysis, PPTX support
-- **v1.0**: Initial version with Anthropic Claude only
+- **v2.0.1** (2025-11-24):
+  - Changed OpenAI default model to `gpt-4o-mini-2024-07-18`
+  - Added `--skip-images` flag for text-only analysis
+  - Enhanced OpenAI content moderation error handling
+  - Added detailed JSON parsing error messages
+  - Output raw LLM responses for debugging
+
+- **v2.0** (2024-11-20): Multi-backend support (Ollama/OpenAI/Anthropic), image analysis, PPTX support
+- **v1.0** (2024-11-20): Initial version with Anthropic Claude only

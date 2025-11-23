@@ -111,6 +111,7 @@ python3 fa_report_analyzer_v2.py -i report.pdf -b anthropic -k YOUR_API_KEY
 | `--model` | `-m` | 模型名稱 | 依後端自動選擇 |
 | `--api-key` | `-k` | API Key | 無 |
 | `--base-url` | - | API Base URL | 無 |
+| `--skip-images` | - | 跳過圖片分析 | False |
 
 ### 支援的文件格式
 
@@ -158,10 +159,21 @@ python3 fa_report_analyzer_v2.py -i fa_presentation.pptx -o evaluation.txt
 python3 fa_report_analyzer_v2.py -i report.pdf -m llava:13b
 ```
 
-### 範例 6: 使用 OpenAI GPT-4o
+### 範例 6: 使用 OpenAI GPT-4o Mini
 
 ```bash
+# 使用預設的 gpt-4o-mini-2024-07-18
+python3 fa_report_analyzer_v2.py -i report.pdf -b openai -k sk-xxxx
+
+# 或指定完整版 gpt-4o
 python3 fa_report_analyzer_v2.py -i report.pdf -b openai -m gpt-4o -k sk-xxxx
+```
+
+### 範例 7: 僅分析文字（跳過圖片）
+
+```bash
+# 適用於避免 OpenAI 內容審核問題
+python3 fa_report_analyzer_v2.py -i report.pdf -b openai -k sk-xxxx --skip-images
 ```
 
 ## 🎯 後端選擇指南
@@ -196,7 +208,8 @@ python3 fa_report_analyzer_v2.py -i report.pdf -b openai -m gpt-4o -k sk-xxxx
 - ⚠️ 依賴網路連接
 
 **推薦模型:**
-- `gpt-4o` - 最新視覺模型
+- `gpt-4o-mini-2024-07-18` - 預設使用的輕量高效模型（v2.0 預設）
+- `gpt-4o` - 最新視覺模型（需手動指定）
 - `gpt-4-turbo` - 高速版本
 
 ### Anthropic Claude
@@ -396,6 +409,13 @@ fa-report-analyzer-v2/
 - **Anthropic Claude**: https://www.anthropic.com
 
 ## 📝 版本歷史
+
+### v2.0.1 (2025-11-24)
+- 🔧 調整 OpenAI 預設模型為 `gpt-4o-mini-2024-07-18`
+- ✨ 新增 `--skip-images` 參數支援純文字分析
+- 🔧 增強 OpenAI 內容審核錯誤處理與提示
+- 🔧 新增 JSON 解析錯誤詳細說明
+- 📊 輸出分析時顯示原始回應（debugging）
 
 ### v2.0.0 (2024-11-20)
 - ✨ 新增 Ollama 地端模型支援
