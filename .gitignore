@@ -5,12 +5,19 @@ build/
 dist/
 wheels/
 *.egg-info
+.DS_Store
 
 # Virtual environments
 .venv
 .env
+
+# document files
+evaluation_reports/
+evaluation_results/
+reports/
 *.pdf
 *.pptx
 *.pptx
 *.docx
 *.doc
+*.txt
