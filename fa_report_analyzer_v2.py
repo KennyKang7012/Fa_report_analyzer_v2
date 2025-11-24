@@ -66,7 +66,8 @@ class FAReportAnalyzer:
             self.model = model
         else:
             if self.backend == "ollama":
-                self.model = "gpt-oss:20b"  # 支援視覺的模型
+                # self.model = "gpt-oss:20b"  # 支援視覺的模型
+                self.model = "llama3.1:latest"
             elif self.backend == "openai":
                 # self.model = "gpt-4.1-mini“
                 # self.model = "gpt-4o-2024-05-13"
@@ -526,12 +527,12 @@ class FAReportAnalyzer:
   "total_score": <總分數字>,
   "grade": "<等級字母>",
   "dimension_scores": {{
-    "基本資訊完整性": {{"score": <分數>, "percentage": <百分比>, "comment": "<評語>"}},
-    "問題描述與定義": {{"score": <分數>, "percentage": <百分比>, "comment": "<評語>"}},
-    "分析方法與流程": {{"score": <分數>, "percentage": <百分比>, "comment": "<評語>"}},
-    "數據與證據支持": {{"score": <分數>, "percentage": <百分比>, "comment": "<評語>"}},
-    "根因分析": {{"score": <分數>, "percentage": <百分比>, "comment": "<評語>"}},
-    "改善對策": {{"score": <分數>, "percentage": <百分比>, "comment": "<評語>"}}
+    "基本資訊完整性": {{"score": <分數>, "percentage": <百分比數字>, "comment": "<評語>"}},
+    "問題描述與定義": {{"score": <分數>, "percentage": <百分比數字>, "comment": "<評語>"}},
+    "分析方法與流程": {{"score": <分數>, "percentage": <百分比數字>, "comment": "<評語>"}},
+    "數據與證據支持": {{"score": <分數>, "percentage": <百分比數字>, "comment": "<評語>"}},
+    "根因分析": {{"score": <分數>, "percentage": <百分比數字>, "comment": "<評語>"}},
+    "改善對策": {{"score": <分數>, "percentage": <百分比數字>, "comment": "<評語>"}}
   }},
   "strengths": [
     "<具體優點1>",
@@ -545,13 +546,42 @@ class FAReportAnalyzer:
   "summary": "<總評與建議>"
 }}
 
-重要:你的回應必須是純 JSON 格式,不要包含任何其他文字、markdown 標記或程式碼區塊符號。
+重要格式要求:
+1. 你的回應必須是純 JSON 格式,不要包含任何其他文字、markdown 標記或程式碼區塊符號
+2. 所有數字欄位(total_score, score, percentage)必須是純數字,不要加單位或符號(例如: 85.5 而不是 85.5% 或 85.5分)
+3. percentage 是百分比數值(0-100),例如: 93.33 表示 93.33%
 
 【FA 報告內容】
 {report_content}
 """
         return prompt
     
+    def _clean_json_response(self, response_text: str) -> str:
+        """清理 AI 返回的 JSON 響應
+
+        Args:
+            response_text: 原始響應文本
+
+        Returns:
+            清理後的 JSON 字串
+        """
+        import re
+
+        # 移除 markdown 代碼塊標記
+        response_text = response_text.replace('```json', '').replace('```', '').strip()
+
+        # 提取 JSON 部分（處理前後有額外文字的情況）
+        if '{' in response_text and '}' in response_text:
+            start = response_text.find('{')
+            end = response_text.rfind('}') + 1
+            response_text = response_text[start:end]
+
+        # 清理 JSON 中的常見格式錯誤
+        # 移除數字後面的 % 符號 (例如: "percentage": 93.33% -> "percentage": 93.33)
+        response_text = re.sub(r':\s*(\d+\.?\d*)\s*%', r': \1', response_text)
+
+        return response_text
+
     def analyze_with_ai(self, report_content: str, images: List[Dict] = None) -> Dict:
         """使用 AI 分析報告
 
@@ -618,15 +648,28 @@ class FAReportAnalyzer:
         )
         
         response_text = response['message']['content'].strip()
-        
+
         print("=== Ollama raw response ===")
         print(response_text)
         print("=== End raw response ===")
 
         # 清理並解析 JSON
-        response_text = response_text.replace('```json', '').replace('```', '').strip()
-        result = json.loads(response_text)
-        return result
+        response_text = self._clean_json_response(response_text)
+
+        try:
+            result = json.loads(response_text)
+            return result
+        except json.JSONDecodeError as e:
+            print(f"\nJSON 解析錯誤: {e}")
+            print(f"清理後的響應文本:")
+            print(response_text)
+            print(f"\n錯誤位置附近的內容:")
+            if e.pos < len(response_text):
+                start = max(0, e.pos - 50)
+                end = min(len(response_text), e.pos + 50)
+                print(f"...{response_text[start:end]}...")
+                print(f"    {' ' * (min(50, e.pos - start))}^")
+            raise
     
     def _analyze_with_openai(self, prompt: str, images: List[Dict] = None) -> Dict:
         """使用 OpenAI API 進行分析"""
@@ -687,7 +730,8 @@ class FAReportAnalyzer:
                 raise ValueError("OpenAI API 拒絕處理此請求,請嘗試其他後端或純文字分析")
 
             # 清理並解析 JSON
-            response_text = response_text.replace('```json', '').replace('```', '').strip()
+            response_text = self._clean_json_response(response_text)
+
             result = json.loads(response_text)
             return result
 
@@ -695,7 +739,15 @@ class FAReportAnalyzer:
             print("\n" + "=" * 80)
             print("⚠️  OpenAI 返回了無效的 JSON 格式")
             print("=" * 80)
-            print(f"原始回應: {response_text[:200]}...")
+            print(f"JSON 解析錯誤: {e}")
+            print(f"清理後的響應文本:")
+            print(response_text[:500])
+            print(f"\n錯誤位置附近的內容:")
+            if e.pos < len(response_text):
+                start = max(0, e.pos - 50)
+                end = min(len(response_text), e.pos + 50)
+                print(f"...{response_text[start:end]}...")
+                print(f"    {' ' * (min(50, e.pos - start))}^")
             print("\n這通常表示:")
             print("1. 模型拒絕了請求")
             print("2. 回應格式不符合預期")
@@ -739,11 +791,24 @@ class FAReportAnalyzer:
         print("=== Anthropic Claude raw response ===")
         print(response_text)
         print("=== End raw response ===")
-        
+
         # 清理並解析 JSON
-        response_text = response_text.replace('```json', '').replace('```', '').strip()
-        result = json.loads(response_text)
-        return result
+        response_text = self._clean_json_response(response_text)
+
+        try:
+            result = json.loads(response_text)
+            return result
+        except json.JSONDecodeError as e:
+            print(f"\nJSON 解析錯誤: {e}")
+            print(f"清理後的響應文本:")
+            print(response_text)
+            print(f"\n錯誤位置附近的內容:")
+            if e.pos < len(response_text):
+                start = max(0, e.pos - 50)
+                end = min(len(response_text), e.pos + 50)
+                print(f"...{response_text[start:end]}...")
+                print(f"    {' ' * (min(50, e.pos - start))}^")
+            raise
     
     def calculate_grade(self, total_score: float) -> Tuple[str, str]:
         """計算等級"""
@@ -754,7 +819,7 @@ class FAReportAnalyzer:
     
     def generate_report(self, analysis_result: Dict, output_path: str = None, source_file: str = None) -> str:
         """生成評估報告"""
-        total_score = analysis_result['total_score']
+        total_score = float(analysis_result['total_score'])
         grade = analysis_result['grade']
         grade_desc = [desc for g, (_, _, desc) in self.grade_criteria.items() if g == grade][0]
 
@@ -783,8 +848,8 @@ class FAReportAnalyzer:
             dimension_data.append({
                 '評估維度': dim_name,
                 '權重': f"{self.dimensions[dim_name]}%",
-                '得分': f"{dim_info['score']:.1f}",
-                '完成度': f"{dim_info['percentage']:.1f}%",
+                '得分': f"{float(dim_info['score']):.1f}",
+                '完成度': f"{float(dim_info['percentage']):.1f}%",
                 '評語': dim_info['comment']
             })
         
@@ -929,7 +994,7 @@ def main():
         result = analyzer.analyze_report(args.input, args.output)
         
         # 顯示摘要
-        print(f"\n總分: {result['total_score']:.1f} 分")
+        print(f"\n總分: {float(result['total_score']):.1f} 分")
         print(f"等級: {result['grade']}")
         
     except Exception as e:
