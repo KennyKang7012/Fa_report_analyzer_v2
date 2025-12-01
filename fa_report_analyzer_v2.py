@@ -60,6 +60,7 @@ class FAReportAnalyzer:
         self.api_key = api_key
         self.base_url = base_url
         self.skip_images = skip_images
+        self.temp_files = []  # 用於追蹤需要清理的臨時文件
         
         # 設定預設模型
         if model:
@@ -184,8 +185,10 @@ class FAReportAnalyzer:
                     # LibreOffice 會生成與原文件同名但副檔名為 .pptx 的文件
                     auto_pptx = ppt_path.rsplit('.', 1)[0] + '.pptx'
                     if os.path.exists(auto_pptx):
+                        self.temp_files.append(auto_pptx)  # 記錄臨時文件
                         return auto_pptx
                     elif os.path.exists(pptx_path):
+                        self.temp_files.append(pptx_path)  # 記錄臨時文件
                         return pptx_path
         except Exception as e:
             print(f"  LibreOffice 轉換失敗: {e}")
@@ -204,14 +207,29 @@ class FAReportAnalyzer:
                 deck.SaveAs(os.path.abspath(pptx_path), 24)  # 24 = ppSaveAsOpenXMLPresentation
                 deck.Close()
                 powerpoint.Quit()
-                
+
                 if os.path.exists(pptx_path):
+                    self.temp_files.append(pptx_path)  # 記錄臨時文件
                     return pptx_path
             except Exception as e:
                 print(f"  COM 轉換失敗: {e}")
         
         return None
-    
+
+    def _cleanup_temp_files(self):
+        """清理臨時轉換的文件"""
+        import os
+
+        for temp_file in self.temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    print(f"✓ 已清理臨時文件: {temp_file}")
+            except Exception as e:
+                print(f"⚠️  清理臨時文件失敗 ({temp_file}): {e}")
+
+        self.temp_files.clear()
+
     def _encode_image(self, image_path: str) -> str:
         """將圖片編碼為 base64
         
@@ -550,6 +568,7 @@ class FAReportAnalyzer:
 1. 你的回應必須是純 JSON 格式,不要包含任何其他文字、markdown 標記或程式碼區塊符號
 2. 所有數字欄位(total_score, score, percentage)必須是純數字,不要加單位或符號(例如: 85.5 而不是 85.5% 或 85.5分)
 3. percentage 是百分比數值(0-100),例如: 93.33 表示 93.33%
+4. 使用台灣繁體中文回答
 
 【FA 報告內容】
 {report_content}
@@ -897,43 +916,50 @@ class FAReportAnalyzer:
         print("FA 報告分析工具 v2.0")
         print("=" * 80)
 
-        # 1. 讀取報告
-        print(f"\n[1/3] 讀取報告文件: {input_file}")
-        report_content, images = self.read_report(input_file)
-        print(f"✓ 成功讀取報告 ({len(report_content)} 字元)")
-        if images:
-            print(f"✓ 提取到 {len(images)} 張圖片")
+        try:
+            # 1. 讀取報告
+            print(f"\n[1/3] 讀取報告文件: {input_file}")
+            report_content, images = self.read_report(input_file)
+            print(f"✓ 成功讀取報告 ({len(report_content)} 字元)")
+            if images:
+                print(f"✓ 提取到 {len(images)} 張圖片")
 
-        # 2. AI 分析
-        print(f"\n[2/3] 使用 {self.backend.upper()} 進行深度分析...")
-        analysis_result = self.analyze_with_ai(report_content, images)
-        print("✓ 分析完成")
+            # 2. AI 分析
+            print(f"\n[2/3] 使用 {self.backend.upper()} 進行深度分析...")
+            analysis_result = self.analyze_with_ai(report_content, images)
+            print("✓ 分析完成")
 
-        # 3. 生成報告
-        print("\n[3/3] 生成評估報告...")
+            # 3. 生成報告
+            print("\n[3/3] 生成評估報告...")
 
-        # 創建輸出資料夾
-        output_dir = "evaluation_results"
-        os.makedirs(output_dir, exist_ok=True)
+            # 創建輸出資料夾
+            output_dir = "evaluation_results"
+            os.makedirs(output_dir, exist_ok=True)
 
-        # 如果沒有指定輸出文件，自動生成文件名
-        if not output_file:
-            output_file = f"fa_evaluation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            # 如果沒有指定輸出文件，自動生成文件名
+            if not output_file:
+                output_file = f"fa_evaluation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
 
-        # 確保輸出文件在指定資料夾內
-        if not output_file.startswith(output_dir):
-            output_file = os.path.join(output_dir, os.path.basename(output_file))
+            # 確保輸出文件在指定資料夾內
+            if not output_file.startswith(output_dir):
+                output_file = os.path.join(output_dir, os.path.basename(output_file))
 
-        # 獲取來源文件名
-        source_filename = os.path.basename(input_file)
+            # 獲取來源文件名
+            source_filename = os.path.basename(input_file)
 
-        report_text = self.generate_report(analysis_result, output_file, source_filename)
+            report_text = self.generate_report(analysis_result, output_file, source_filename)
 
-        print("\n" + "=" * 80)
-        print("分析完成!")
-        print("=" * 80)
+            print("\n" + "=" * 80)
+            print("分析完成!")
+            print("=" * 80)
 
-        return analysis_result
+            return analysis_result
+
+        finally:
+            # 清理臨時轉換的文件（無論分析成功或失敗都會執行）
+            if self.temp_files:
+                print("\n[清理] 移除臨時轉換文件...")
+                self._cleanup_temp_files()
 
 
 def main():

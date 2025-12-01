@@ -179,7 +179,6 @@ The `create_analysis_prompt()` method constructs the evaluation prompt. Modify t
 **Configuration:**
 - `pyproject.toml` - uv package manager config
 - `requirements.txt` - pip dependencies
-- `.python-version` - Python version specification
 
 ## Important Notes
 
@@ -229,6 +228,13 @@ for report_file in glob.glob("reports/*.pdf"):
 ```
 
 ## Version History
+
+- **v2.0.2** (2025-12-01):
+  - Added automatic temporary file cleanup for PPT conversions
+  - Implemented `_cleanup_temp_files()` method with try-finally pattern
+  - Enhanced AI prompts to explicitly request Traditional Chinese responses
+  - Removed uv package manager configuration files (.python-version, uv.lock)
+  - Improved resource management and error handling
 
 - **v2.0.1** (2025-11-24):
   - Changed OpenAI default model to `gpt-4o-mini-2024-07-18`
